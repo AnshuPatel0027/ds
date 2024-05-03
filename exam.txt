@@ -1,0 +1,139 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+
+df = pd.read_csv("/content/tmdb_5000_movies.csv")
+
+
+
+df.info()
+
+
+
+df.describe()
+
+
+
+df.nunique()
+
+
+
+# I will not use these columns in my notebook
+droped_colmuns = ['homepage','keywords', 'tagline']
+df.drop(columns=droped_colmuns, inplace=True)
+
+
+
+# we need to convert these columns to suitable datatypes
+df['release_date'] = pd.to_datetime(df['release_date'])
+
+
+
+df[df.duplicated()]
+
+
+
+# Counting nans
+df.isna().sum()
+
+
+
+# Dop NaN Values Because they are not a lot
+df.dropna(inplace=True)
+
+
+
+# we note that we should found unrealistic like zero in budget and revenue
+zero_budget = df.loc[df["budget"] == 0]
+zero_budget.head()
+
+
+
+df['release_year'] = df['release_date'].dt.year
+df.head()
+
+
+
+zero_budget = df.loc[df["budget"] == 0]
+yrs_counts_zero_budget = zero_budget["release_year"].value_counts()
+# I Choosed to make it as perctages because counts of movies is increasing over time
+# Percentages Are More Accurate
+budget_zero_percent = (yrs_counts_zero_budget / df["release_year"].value_counts()) *100
+sns.set_style("darkgrid")
+sns.set_palette("deep")
+sns.lineplot(x=budget_zero_percent.index,y=budget_zero_percent.values)
+plt.title('Movies Counts By Years')
+plt.xlabel('Year')
+plt.ylabel('Number Of Movies')
+plt.show()
+
+
+
+zero_revenue = df.loc[df["revenue"] == 0]
+zero_revenue.size
+
+
+
+# Making the profit column to use it in the EDA
+df["profit"] = df["revenue"] - df["budget"]
+
+
+
+import json
+genres_list = df['genres']
+genres_list.head(10)
+# Convert the string representation of list to actual list of dictionaries
+df['genres'] = df['genres'].apply(lambda x: json.loads(x))
+# Extract just the names from each dictionary
+df['genres'] = df['genres'].apply(lambda genres_list: [genre['name'] for genre in genres_list])
+df.head()
+
+
+
+def groupby_plots(df: pd.DataFrame,
+                  by: str,
+                  column: str,
+                  operation: str,
+                  count:[int] = None) -> pd.Series:
+    operation_val = "Average" if operation == "mean" else "Total"
+    grouped = df.groupby(by)[column].agg(operation).sort_values(ascending=False)[:count]
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=grouped.index,y=grouped.values,palette="viridis")
+    plt.title(f'{operation_val} {column.title()} by {by.title()}')
+    plt.xlabel(f'{by.title()}')
+    plt.ylabel(f'{operation_val} {column.title()}')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+    return grouped
+groupby_plots(df=df.explode('genres'),by="genres",column="popularity",operation="sum")
+
+
+
+# Linear Regression
+# Import libraries
+from sklearn.linear_model import LinearRegression
+# Load data (replace 'app_store_data.csv' with your actual file path)
+data = pd.read_csv('/content/tmdb_5000_movies.csv')
+# Define target variable and features
+target_variable = 'revenue'
+features = ['popularity', 'budget']  # You can add or remove features as needed
+# Split data into training and testing sets
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(data[features], data[target_variable], test_size=0.2)
+# Create and train the linear regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Make predictions on testing data
+y_predicted = model.predict(X_test)
+# Evaluate model performance (e.g., using mean squared error)
+from sklearn.metrics import mean_squared_error
+mse = mean_squared_error(y_test, y_predicted)
+print("Mean Squared Error:", mse)
+# Make predictions on new data (replace with your new data)
+new_data = {'popularity': [21.492301], 'budget': [2.904504e+07]}  # Example data
+new_prediction = model.predict(pd.DataFrame(new_data))
+print("Predicted revenue for new data:", new_prediction[0])
