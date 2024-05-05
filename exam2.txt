@@ -94,3 +94,31 @@ print("\nKurtosis: ", kurtosis)
 
 
 
+import pandas as pd
+df = pd.read_csv('your_dataset.csv')
+
+print("First few rows of the dataset:")
+print(df.head())
+print("\nChecking for missing values:")
+print(df.isnull().sum())
+
+numerical_columns = df.select_dtypes(include=['float64', 'int64']).columns
+for col in numerical_columns:
+    df[col].fillna(df[col].mean(), inplace=True)
+
+categorical_columns = df.select_dtypes(include=['object']).columns
+for col in categorical_columns:
+    df[col].fillna(df[col].mode()[0], inplace=True)
+
+print("\nChecking for duplicates:")
+print(df.duplicated().sum())
+
+df.drop_duplicates(inplace=True)
+
+# Convert data types if necessary
+# df['date_column'] = pd.to_datetime(df['date_column'])
+
+df.to_csv('cleaned_dataset.csv', index=False)
+
+print("\nData cleaning completed.")
+
